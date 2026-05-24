@@ -438,9 +438,10 @@
       <div class="chat-tab-content active" id="ctab-text"></div>
 
       <div class="chat-tab-content" id="ctab-url">
-        <div class="input-group" id="url-name-group" style="display:none">
-          <label>שם המקום שנמצא בסרטון</label>
-          <input type="text" class="agent-input" id="input-url-name" placeholder="הקלד את שם המקום" />
+        <div id="url-video-hint" style="display:none;font-size:.78rem;color:#888;margin-bottom:6px;padding:6px 8px;background:rgba(255,255,255,.04);border-radius:6px;"></div>
+        <div class="input-group" id="url-name-group">
+          <label>שם המקום שראית בסרטון</label>
+          <input type="text" class="agent-input" id="input-url-name" placeholder="למשל: Katz's Delicatessen" />
         </div>
       </div>
 
@@ -480,6 +481,7 @@
 
 <script>
   const API_KEY = 'AIzaSyCgKKiiD1AB54dgehDyccHDNrimDTpmysc';
+  const GEMINI_KEY = 'GEMINI_API_KEY_HERE'; // ← מפתח Gemini נפרד
 
   const PHOTO_BASE = 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&key=AIzaSyCgKKiiD1AB54dgehDyccHDNrimDTpmysc&photoreference=';
   const initialPlaces = [
@@ -659,24 +661,27 @@
   }
 
   async function identifyPlaceFromImage(imageData){
-    const base64=imageData.replace(/^data:image\/[a-zA-Z+]+;base64,/,'');
+    const mimeMatch=imageData.match(/^data:([^;]+);/);
+    const mimeType=mimeMatch?mimeMatch[1]:'image/jpeg';
+    const base64=imageData.replace(/^data:[^;]+;base64,/,'');
     try{
       const res=await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
         { method:'POST', headers:{'Content-Type':'application/json'},
           body:JSON.stringify({
             contents:[{parts:[
               {text:'What specific place, restaurant, café, landmark, or tourist attraction is shown in this image? Reply with ONLY the name and city (for example: "Katz\'s Delicatessen, New York" or "Eiffel Tower, Paris"). If you cannot identify a specific named place, reply with exactly: unknown'},
-              {inline_data:{mime_type:file?.type||'image/jpeg',data:base64}}
+              {inline_data:{mime_type:mimeType,data:base64}}
             ]}],
             generationConfig:{maxOutputTokens:60,temperature:0}
           })
         }
       );
       const data=await res.json();
+      if(data.error){console.error('Gemini error:',data.error);return null;}
       const text=data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
       return(text&&text.toLowerCase()!=='unknown')?text:null;
-    }catch{return null;}
+    }catch(e){console.error('identifyPlace error:',e);return null;}
   }
 
   async function runImageSearch(imageData){
@@ -713,7 +718,7 @@
   }
 
   async function getYouTubeTitle(url){
-    try{const res=await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);const data=await res.json();return data.title||null;}catch{return null;}
+    try{const res=await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);const data=await res.json();return data.title||null;}catch{return null;}
   }
 
   function searchPlace(query){
@@ -760,15 +765,19 @@
       const nameOverride=document.getElementById('input-url-name').value.trim();
       if(nameOverride){
         query=nameOverride;
-      }else if(urlVal.includes('youtube.com')||urlVal.includes('youtu.be')){
-        setStatus('מוציא כותרת מהסרטון...',true);
-        const title=await getYouTubeTitle(urlVal);
-        if(title){query=title+' New York';setStatus(`כותרת: "${title}" — מחפש...`,true);}
-        else{document.getElementById('url-name-group').style.display='block';setStatus('לא הצלחתי לחלץ — הקלד את שם המקום',false);document.getElementById('btn-submit').disabled=false;return;}
       }else{
-        document.getElementById('url-name-group').style.display='block';
-        setStatus('הקלד את שם המקום שבסרטון',false);
-        document.getElementById('btn-submit').disabled=false;return;
+        const hint=document.getElementById('url-video-hint');
+        const isYT=urlVal.includes('youtube.com')||urlVal.includes('youtu.be');
+        if(isYT&&urlVal){
+          setStatus('מוציא כותרת מהסרטון...',true);
+          const title=await getYouTubeTitle(urlVal);
+          if(title){hint.textContent='🎬 '+title;hint.style.display='block';}
+          else{hint.style.display='none';}
+        }
+        setStatus('הקלד את שם המקום שראית בסרטון',false);
+        document.getElementById('input-url-name').focus();
+        document.getElementById('btn-submit').disabled=false;
+        return;
       }
     }else if(activeTab==='image'){
       if(!uploadedImageData){
@@ -886,7 +895,8 @@
   function resetAgent(){
     document.getElementById('input-text').value='';
     document.getElementById('input-url-name').value='';
-    document.getElementById('url-name-group').style.display='none';
+    document.getElementById('url-video-hint').style.display='none';
+    document.getElementById('url-video-hint').textContent='';
     document.getElementById('image-preview').style.display='none';
     document.getElementById('image-preview').src='';
     document.getElementById('upload-zone').style.display='block';
