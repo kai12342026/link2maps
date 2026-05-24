@@ -329,17 +329,28 @@
     }
 
     @media (max-width: 640px) {
-      body { flex-direction: column; overflow: auto; height: auto; min-height: 100vh; }
+      html { overflow-x: hidden; }
+      body {
+        flex-direction: column;
+        overflow-x: hidden; overflow-y: auto;
+        height: auto;
+        min-height: 100vh; min-height: 100svh;
+      }
       .map-panel { display: none; }
       .main-panel {
-        flex: none; width: 100%; min-height: 100dvh;
-        overflow: visible; padding: 24px 16px calc(var(--bar-h) + 24px);
+        flex: none; width: 100%;
+        min-height: 100vh; min-height: 100svh;
+        overflow: visible;
+        padding: 20px 16px calc(var(--bar-h) + env(safe-area-inset-bottom, 0px) + 32px);
       }
-      header h1 { font-size: 1.7rem; }
-      .grid { grid-template-columns: 1fr; gap: 16px; }
-      .chat-panel { max-height: 52vh; }
-      .chat-panel-wrap.open { max-height: 52vh; }
-      .chat-tab { font-size: .72rem; }
+      header { margin-bottom: 24px; }
+      header h1 { font-size: 1.6rem; }
+      .grid { grid-template-columns: 1fr; gap: 14px; }
+      .card-img-wrap { height: 160px; }
+      .chat-panel { max-height: 46vh; overflow-y: auto; }
+      .chat-panel-wrap.open { max-height: 46vh; }
+      .chat-tab { font-size: .71rem; padding: 7px 2px; }
+      .chat-main-input { font-size: .85rem; }
       .selection-bar { width: calc(100% - 32px); border-radius: 14px; }
     }
   </style>
