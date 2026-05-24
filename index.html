@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New York 🗽 — המקומות שלי</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d12;
+      --surface: #18181f;
+      --border: #2a2a35;
+      --text: #f0f0f0;
+      --muted: #666;
+      --blue: #1a73e8;
+      --blue-hover: #1558b0;
+      --map-width: 380px;
+      --bar-h: 66px;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    .main-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 40px 28px calc(var(--bar-h) + 16px);
+    }
+
+    header { text-align: center; margin-bottom: 40px; }
+    header h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 6px; }
+    header p { color: var(--muted); font-size: 0.9rem; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 24px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      cursor: pointer;
+    }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 20px 44px rgba(0,0,0,.5); }
+
+    .card.is-new::after {
+      content: 'חדש ✨';
+      position: absolute; top: 10px; right: 10px;
+      background: #e53935; color: #fff;
+      font-size: 0.7rem; font-weight: 700;
+      padding: 3px 9px; border-radius: 100px; z-index: 10;
+    }
+
+    .card-img-wrap {
+      position: relative; height: 200px; overflow: hidden;
+      display: block; cursor: pointer; text-decoration: none;
+    }
+    .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.35s; }
+    .card-img-wrap:hover img { transform: scale(1.06); }
+    .card-img-wrap .grad {
+      position: absolute; inset: 0;
+      background: linear-gradient(to top, rgba(10,10,15,.85) 0%, transparent 55%);
+    }
+    .category-badge {
+      position: absolute; top: 10px; left: 10px;
+      background: rgba(0,0,0,.55); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,.12);
+      color: #fff; font-size: .75rem; padding: 3px 9px; border-radius: 100px;
+    }
+    .title-overlay { position: absolute; bottom: 12px; right: 14px; left: 14px; }
+    .title-overlay h2 { font-size: 1.1rem; font-weight: 700; color: #fff; line-height: 1.3; }
+
+    .card-body { padding: 14px 16px 16px; }
+    .address { font-size: .8rem; color: var(--muted); margin-bottom: 10px; line-height: 1.5; }
+
+    .link-box {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 7px 10px;
+      font-size: .68rem; color: #4a8cff;
+      font-family: 'SF Mono', monospace;
+      word-break: break-all; margin-bottom: 12px;
+      direction: ltr; text-align: left; line-height: 1.5;
+    }
+
+    .actions { display: flex; gap: 8px; }
+    .btn-maps {
+      flex: 1; background: var(--blue); color: #fff;
+      border: none; padding: 9px 0; border-radius: 9px;
+      font-size: .85rem; font-weight: 600; cursor: pointer;
+      text-decoration: none; text-align: center; display: block;
+      transition: background .15s;
+    }
+    .btn-maps:hover { background: var(--blue-hover); }
+    .btn-copy {
+      background: #22222c; color: #bbb;
+      border: 1px solid var(--border);
+      padding: 9px 14px; border-radius: 9px;
+      font-size: .85rem; cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .btn-copy:hover { background: #2c2c3a; color: #fff; }
+    .btn-copy.copied { background: #0d2a0d; color: #4caf50; border-color: #2e5e2e; }
+
+    .map-panel {
+      width: var(--map-width); min-width: var(--map-width);
+      border-right: 1px solid var(--border);
+      position: relative; display: flex; flex-direction: column;
+      padding-bottom: var(--bar-h);
+    }
+    .map-panel-header {
+      padding: 14px 16px; font-size: .82rem; font-weight: 600;
+      color: var(--muted); border-bottom: 1px solid var(--border); letter-spacing: .4px;
+    }
+    #map { flex: 1; }
+
+    .gm-style-iw-chr { display: none !important; }
+    .gm-style-iw-c {
+      padding: 0 !important; border-radius: 14px !important;
+      overflow: hidden !important; background: #18181f !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,.6) !important;
+    }
+    .gm-style-iw-d { overflow: hidden !important; padding: 0 !important; }
+    .gm-style-iw-tc::after { background: #18181f !important; }
+
+    .card.selected { border-color: var(--blue); box-shadow: 0 0 0 2px var(--blue); }
+    .card .select-check {
+      position: absolute; top: 10px; right: 10px;
+      width: 22px; height: 22px;
+      background: rgba(0,0,0,.5); border: 2px solid rgba(255,255,255,.4);
+      border-radius: 50%; z-index: 20;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .75rem; transition: background .15s, border-color .15s;
+      pointer-events: none;
+    }
+    .card.is-new .select-check { right: 70px; }
+    .card.selected .select-check { background: var(--blue); border-color: var(--blue); }
+    .card.selected .select-check::after { content: '✓'; color: #fff; font-weight: 700; }
+
+    @keyframes cardPop {
+      0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(26,115,232,0); }
+      40%  { transform: scale(1.03); box-shadow: 0 0 0 6px rgba(26,115,232,.4); }
+      100% { transform: scale(1); box-shadow: 0 0 0 2px rgba(26,115,232,.2); }
+    }
+    .card.highlighted { animation: cardPop .5s ease forwards; border-color: var(--blue); }
+
+    .selection-bar {
+      position: fixed;
+      bottom: calc(var(--bar-h) + 16px); left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: #1e1e2e; border: 1px solid var(--border);
+      border-radius: 100px; padding: 10px 16px 10px 20px;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      z-index: 300; opacity: 0; pointer-events: none;
+      transition: opacity .2s, transform .2s;
+    }
+    .selection-bar.visible { opacity: 1; pointer-events: all; transform: translateX(-50%) translateY(0); }
+    .selection-bar span { font-size: .88rem; color: #ccc; }
+    .sel-btn { border: none; border-radius: 100px; padding: 7px 16px; font-size: .85rem; font-weight: 600; cursor: pointer; }
+    .sel-btn-copy { background: var(--blue); color: #fff; }
+    .sel-btn-copy:hover { background: var(--blue-hover); }
+    .sel-btn-cancel { background: #2a2a38; color: #bbb; }
+    .sel-btn-cancel:hover { background: #333; color: #fff; }
+
+    /* ── CHAT BAR ── */
+    .chat-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 200;
+      background: rgba(11,11,16,.97);
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -6px 32px rgba(0,0,0,.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .chat-panel-wrap {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height .32s cubic-bezier(.4,0,.2,1);
+    }
+    .chat-panel-wrap.open { max-height: 56vh; }
+
+    .chat-panel {
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid var(--border);
+      overflow-y: auto;
+      max-height: 56vh;
+    }
+
+    .chat-tabs {
+      display: flex; gap: 4px; margin-bottom: 14px;
+      background: var(--bg); border-radius: 10px; padding: 3px;
+    }
+    .chat-tab {
+      flex: 1; padding: 7px 4px;
+      background: none; border: none;
+      color: var(--muted); font-size: .78rem;
+      cursor: pointer; border-radius: 8px;
+      transition: background .15s, color .15s;
+      font-family: inherit; white-space: nowrap;
+    }
+    .chat-tab.active { background: var(--surface); color: var(--text); font-weight: 600; }
+
+    .chat-tab-content { display: none; margin-bottom: 8px; }
+    .chat-tab-content.active { display: block; }
+
+    .input-group { margin-bottom: 14px; }
+    .input-group label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: 6px; }
+
+    .agent-input {
+      width: 100%; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 11px 14px; color: var(--text);
+      font-size: .9rem; outline: none;
+      transition: border-color .15s; font-family: inherit; resize: vertical;
+    }
+    .agent-input:focus { border-color: var(--blue); }
+
+    .upload-zone {
+      border: 2px dashed var(--border); border-radius: 12px;
+      padding: 28px 20px; text-align: center;
+      cursor: pointer; color: var(--muted); font-size: .88rem;
+      transition: border-color .15s, background .15s; margin-bottom: 14px;
+    }
+    .upload-zone:hover { border-color: var(--blue); background: rgba(26,115,232,.05); }
+    .upload-zone .icon { font-size: 2rem; margin-bottom: 8px; }
+
+    #image-preview {
+      width: 100%; max-height: 150px; object-fit: cover;
+      border-radius: 10px; display: none; margin-bottom: 14px;
+    }
+    #file-input { display: none; }
+
+    .result-preview {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px; margin-bottom: 16px; display: none;
+    }
+    .result-preview.show { display: block; }
+    .result-name { font-size: .95rem; font-weight: 700; margin-bottom: 4px; }
+    .result-addr { font-size: .78rem; color: var(--muted); }
+    .result-confirm { margin-top: 10px; font-size: .82rem; color: #4a8cff; }
+
+    .agent-status {
+      font-size: .82rem; color: var(--muted);
+      min-height: 20px; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid var(--border); border-top-color: var(--blue);
+      border-radius: 50%; animation: spin .7s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .btn-add-confirm {
+      width: 100%; background: #1e7e34; color: #fff; border: none;
+      padding: 12px; border-radius: 11px;
+      font-size: .95rem; font-weight: 700; cursor: pointer;
+      display: none; font-family: inherit;
+    }
+    .btn-add-confirm:hover { background: #1a6b2c; }
+
+    .chat-input-row {
+      display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+    }
+
+    .chat-main-input {
+      flex: 1; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 22px;
+      padding: 11px 16px; color: var(--text);
+      font-size: .9rem; outline: none; font-family: inherit;
+      transition: border-color .15s; min-height: 44px;
+    }
+    .chat-main-input:focus { border-color: var(--blue); }
+    .chat-main-input::placeholder { color: var(--muted); }
+    .chat-main-input:disabled { opacity: .5; cursor: not-allowed; }
+
+    .chat-icon-btn {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--muted); font-size: 1.15rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s, color .15s, border-color .15s; flex-shrink: 0;
+    }
+    .chat-icon-btn:hover { background: #22222c; color: var(--text); }
+    .chat-icon-btn.img-active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+    .chat-expand-btn {
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--muted); font-size: .7rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .25s, color .15s, background .15s; flex-shrink: 0;
+    }
+    .chat-expand-btn.open { transform: rotate(180deg); color: var(--blue); }
+    .chat-expand-btn:hover { background: var(--surface); }
+
+    .chat-send-btn {
+      width: 44px; height: 44px; border-radius: 50%; border: none;
+      background: var(--blue); color: #fff; font-size: 1.3rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background .15s, transform .15s; flex-shrink: 0;
+      box-shadow: 0 4px 14px rgba(26,115,232,.45); font-family: inherit;
+    }
+    .chat-send-btn:hover { background: var(--blue-hover); transform: scale(1.07); }
+    .chat-send-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    footer {
+      text-align: center; padding: 20px;
+      color: #2a2a35; font-size: .75rem;
+    }
+
+    @media (max-width: 640px) {
+      body { flex-direction: column; overflow: auto; height: auto; min-height: 100vh; }
+      .map-panel { display: none; }
+      .main-panel {
+        flex: none; width: 100%; min-height: 100dvh;
+        overflow: visible; padding: 24px 16px calc(var(--bar-h) + 24px);
+      }
+      header h1 { font-size: 1.7rem; }
+      .grid { grid-template-columns: 1fr; gap: 16px; }
+      .chat-panel { max-height: 52vh; }
+      .chat-panel-wrap.open { max-height: 52vh; }
+      .chat-tab { font-size: .72rem; }
+      .selection-bar { width: calc(100% - 32px); border-radius: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="map-panel">
+  <div class="map-panel-header">🗺️ &nbsp;מפה — New York</div>
+  <div id="map"></div>
+</div>
+
+<div class="main-panel">
+  <header>
+    <h1>New York 🗽</h1>
+    <p id="place-count">3 מקומות שמורים</p>
+  </header>
+
+  <div class="grid" id="places-grid">
+
+    <div class="card" data-place-id="ChIJfQDvGoxZwokRvzLRRApytgQ" data-lat="40.7612789" data-lng="-73.9641664" data-name="Roosevelt Island Tram">
+      <div class="select-check"></div>
+      <a class="card-img-wrap" href="https://www.google.com/maps/search/?api=1&query=Roosevelt+Island+Tram&query_place_id=ChIJfQDvGoxZwokRvzLRRApytgQ" target="_blank" rel="noopener">
+        <img src="https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photoreference=Ab43m-tfuDi3zBUCLRC7dB_Vqe_Co0EpmK-Eg-JXMRvloG7_BukLPQUpDKHW4olzduRa1aPBtzf1wxLwg_Mr6DvWa9Fh87xU0_hsiO0P33GtAhtayF5XyoDxuNMwWOlM01Uz0d78tnbnSh6nCQKIUTjCwNLuPKUWKXpomdSsgL_ny9ZfNbAymVclmxDgB3KMfxurwT8ucef4JuwLNYhX8DPnJVq79LwTPokVUbdefeTzXnTtC9Q42GORoIQeAL0eLwvG61NABQKXmZ6LB5BQAog2d98YBPArVyhOy2OEt89KRWHYa7WRXPAenQVJ3Awk61f_iFWYt8O6KzwRpCwOuhVQY3Mc7W7c8MJTON0lD9AfuTujVP50AuEZaUQr9_Fd_lDQhd9toMQfA2O_ShK0BDVY1IgWfHpIuKbaijuKXoQSQss&key=AIzaSyCgKKiiD1AB54dgehDyccHDNrimDTpmysc" alt="Roosevelt Island Tram" loading="lazy">
+        <div class="grad"></div>
+        <span class="category-badge">🌆 תצפית</span>
+        <div class="title-overlay"><h2>Roosevelt Island Tram</h2></div>
+      </a>
+      <div class="card-body">
+        <div class="address">254 E 60th St, New York, NY 10022</div>
+        <div class="link-box">https://www.google.com/maps/search/?api=1&query=Roosevelt+Island+Tram&query_place_id=ChIJfQDvGoxZwokRvzLRRApytgQ</div>
+        <div class="actions">
+          <a class="btn-maps" href="https://www.google.com/maps/search/?api=1&query=Roosevelt+Island+Tram&query_place_id=ChIJfQDvGoxZwokRvzLRRApytgQ" target="_blank">פתח ב-Maps</a>
+          <button class="btn-copy" onclick="copyLink(this,'https://www.google.com/maps/search/?api=1&query=Roosevelt+Island+Tram&query_place_id=ChIJfQDvGoxZwokRvzLRRApytgQ')">העתק</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-place-id="ChIJ_4F5zNJbwokRBLOhm0NpRxc" data-lat="40.7075238" data-lng="-73.9881594" data-name="E River Ferry">
+      <div class="select-check"></div>
+      <a class="card-img-wrap" href="https://www.google.com/maps/search/?api=1&query=E+River+Ferry&query_place_id=ChIJ_4F5zNJbwokRBLOhm0NpRxc" target="_blank" rel="noopener">
+        <img src="https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photoreference=Ab43m-sGR-2K9LLWkklsOAHe4kpp2HHllJPYZ4TYtOxi1XQil4nQ54ZHGDwRda2vAq_nBtKYFIxdfEn13cza-TqcUdELZOCkqGngFjxqUuKqnkRtJmRCMzf4oXR7Q27Kn0Ieejui1GsIjFjsEyWAHqixJSKeaB3JNSIQXWZXegIAsloZcdUNJ0f6IGR6LlWhaaN5yJl3ZI63_ZA3hDf26nNnH8YcDSWIs-DYdQnrFSBoxbDlh5RjVN2A3qmvU1AAseceg8K1TtchRMfamSBjWh1MHGmj_4ZASujYuiaJVUmFHSWdgLYkkgc8uVGaIMJRSBWLUsH-3i018_grJtitlMwTEChqaciRRaYONqT3XjH_t-awkjwkc_XeQNmjAyVUn00y76H9bZ7zIzW0-A1vXnU65u9EeOXKjNjHBv7OOsRAGMw&key=AIzaSyCgKKiiD1AB54dgehDyccHDNrimDTpmysc" alt="E River Ferry" loading="lazy">
+        <div class="grad"></div>
+        <span class="category-badge">🌆 תצפית</span>
+        <div class="title-overlay"><h2>E River Ferry (NYC Ferry)</h2></div>
+      </a>
+      <div class="card-body">
+        <div class="address">East River, New York, NY</div>
+        <div class="link-box">https://www.google.com/maps/search/?api=1&query=E+River+Ferry&query_place_id=ChIJ_4F5zNJbwokRBLOhm0NpRxc</div>
+        <div class="actions">
+          <a class="btn-maps" href="https://www.google.com/maps/search/?api=1&query=E+River+Ferry&query_place_id=ChIJ_4F5zNJbwokRBLOhm0NpRxc" target="_blank">פתח ב-Maps</a>
+          <button class="btn-copy" onclick="copyLink(this,'https://www.google.com/maps/search/?api=1&query=E+River+Ferry&query_place_id=ChIJ_4F5zNJbwokRBLOhm0NpRxc')">העתק</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-place-id="ChIJL-CJmTFZwokRsPcqje_bn7w" data-lat="40.7420024" data-lng="-74.010299" data-name="Little Island">
+      <div class="select-check"></div>
+      <a class="card-img-wrap" href="https://www.google.com/maps/search/?api=1&query=Little+Island+NYC&query_place_id=ChIJL-CJmTFZwokRsPcqje_bn7w" target="_blank" rel="noopener">
+        <img src="https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photoreference=Ab43m-ujaMXmZxap6NqTOF8BpQoyxFwHmFEYiKHhaOUkVdgnnUiuc2-w9qMyxN4zdJ3Y7Jhl7vP0f86P9ua_ygW--bR8KjvVaybo3186Vt2Fkd4uBUiA3L0wiuELoRKogDQJtquZ-UrakmOL3HTRYaYMg_a97X_zThyg6-ByheQ2mNZ3DhbYy4WOpqG_e-bQn8AVMcY6ZdF0FVIcjEdxvpmAo0s36MNg7_mHIKiUZgunkiE9PgvRyMil44x31hSjYjzMEndVZh2MuSfjHm4Qh0WBHHCDLWCKZoVYdzPuC0hmgnAVndERckKrpSEGvsDcc-R3dexT5hCFYz40-7C-ZUgM2O41mwZ9MuQqzGxvS_fb2VHkce4_tWRASPZuGSc-N3VVliyKsWJYbKvGNdGiSJeJVk0FeDAIEinb924xKLjPwpCj1w&key=AIzaSyCgKKiiD1AB54dgehDyccHDNrimDTpmysc" alt="Little Island" loading="lazy">
+        <div class="grad"></div>
+        <span class="category-badge">🌿 פארק / טבע</span>
+        <div class="title-overlay"><h2>Little Island</h2></div>
+      </a>
+      <div class="card-body">
+        <div class="address">Pier 55, Hudson River Park, New York, NY 10014</div>
+        <div class="link-box">https://www.google.com/maps/search/?api=1&query=Little+Island+NYC&query_place_id=ChIJL-CJmTFZwokRsPcqje_bn7w</div>
+        <div class="actions">
+          <a class="btn-maps" href="https://www.google.com/maps/search/?api=1&query=Little+Island+NYC&query_place_id=ChIJL-CJmTFZwokRsPcqje_bn7w" target="_blank">פתח ב-Maps</a>
+          <button class="btn-copy" onclick="copyLink(this,'https://www.google.com/maps/search/?api=1&query=Little+Island+NYC&query_place_id=ChIJL-CJmTFZwokRsPcqje_bn7w')">העתק</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <footer id="footer-count">Link2Maps · 3 מקומות · New York 🗽</footer>
+</div>
+
+<div class="selection-bar" id="selection-bar">
+  <span id="sel-count">0 נבחרו</span>
+  <button class="sel-btn sel-btn-copy" id="sel-copy">העתק לינקים</button>
+  <button class="sel-btn sel-btn-cancel" id="sel-cancel">ביטול</button>
+</div>
+
+<!-- CHAT BAR – fixed floating bar at the bottom -->
+<div class="chat-bar" id="chat-bar">
+
+  <div class="chat-panel-wrap" id="chat-panel-wrap">
+    <div class="chat-panel">
+
+      <div class="chat-tabs">
+        <button class="chat-tab active" data-tab="text">📝 טקסט</button>
+        <button class="chat-tab" data-tab="url">🔗 לינק לסרטון</button>
+        <button class="chat-tab" data-tab="image">🖼️ תמונה</button>
+      </div>
+
+      <div class="chat-tab-content active" id="ctab-text"></div>
+
+      <div class="chat-tab-content" id="ctab-url">
+        <div class="input-group" id="url-name-group" style="display:none">
+          <label>שם המקום שנמצא בסרטון</label>
+          <input type="text" class="agent-input" id="input-url-name" placeholder="הקלד את שם המקום" />
+        </div>
+      </div>
+
+      <div class="chat-tab-content" id="ctab-image">
+        <div class="upload-zone" id="upload-zone">
+          <div class="icon">📷</div>
+          <div>גרור תמונה לכאן או לחץ להעלאה</div>
+          <div style="font-size:.75rem;margin-top:6px;color:#444">PNG, JPG, WEBP</div>
+        </div>
+        <img id="image-preview" alt="preview" />
+        <input type="file" id="file-input" accept="image/*" />
+      </div>
+
+      <div class="agent-status">
+        <div class="spinner" id="spinner"></div>
+        <span id="status-text"></span>
+      </div>
+
+      <div class="result-preview" id="result-preview">
+        <div class="result-name" id="result-name"></div>
+        <div class="result-addr" id="result-addr"></div>
+        <div class="result-confirm">זה המקום הנכון?</div>
+      </div>
+
+      <button class="btn-add-confirm" id="btn-add-confirm">✅ &nbsp;כן, הוסף למפה!</button>
+    </div>
+  </div>
+
+  <div class="chat-input-row">
+    <button class="chat-icon-btn" id="chat-attach" title="העלה תמונה">📎</button>
+    <input type="text" class="chat-main-input" id="input-text"
+           placeholder="הוסף מקום — שם, לינק, או הדבק..." />
+    <button class="chat-expand-btn" id="chat-expand" title="עוד אפשרויות">▾</button>
+    <button class="chat-send-btn" id="btn-submit" title="חפש">🔍</button>
+  </div>
+</div>
+
+<script>
+  const API_KEY = 'AIzaSyCgKKiiD1AB54dgehDyccHDNrimDTpmysc';
+
+  const PHOTO_BASE = 'https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&key=AIzaSyCgKKiiD1AB54dgehDyccHDNrimDTpmysc&photoreference=';
+  const initialPlaces = [
+    { name:'Roosevelt Island Tram', address:'254 E 60th St, New York, NY 10022', category:'🌆 תצפית', place_id:'ChIJfQDvGoxZwokRvzLRRApytgQ', lat:40.7612789, lng:-73.9641664, photoUrl:PHOTO_BASE+'Ab43m-tfuDi3zBUCLRC7dB_Vqe_Co0EpmK-Eg-JXMRvloG7_BukLPQUpDKHW4olzduRa1aPBtzf1wxLwg_Mr6DvWa9Fh87xU0_hsiO0P33GtAhtayF5XyoDxuNMwWOlM01Uz0d78tnbnSh6nCQKIUTjCwNLuPKUWKXpomdSsgL_ny9ZfNbAymVclmxDgB3KMfxurwT8ucef4JuwLNYhX8DPnJVq79LwTPokVUbdefeTzXnTtC9Q42GORoIQeAL0eLwvG61NABQKXmZ6LB5BQAog2d98YBPArVyhOy2OEt89KRWHYa7WRXPAenQVJ3Awk61f_iFWYt8O6KzwRpCwOuhVQY3Mc7W7c8MJTON0lD9AfuTujVP50AuEZaUQr9_Fd_lDQhd9toMQfA2O_ShK0BDVY1IgWfHpIuKbaijuKXoQSQss' },
+    { name:'E River Ferry (NYC Ferry)', address:'East River, New York, NY', category:'🌆 תצפית', place_id:'ChIJ_4F5zNJbwokRBLOhm0NpRxc', lat:40.7075238, lng:-73.9881594, photoUrl:PHOTO_BASE+'Ab43m-sGR-2K9LLWkklsOAHe4kpp2HHllJPYZ4TYtOxi1XQil4nQ54ZHGDwRda2vAq_nBtKYFIxdfEn13cza-TqcUdELZOCkqGngFjxqUuKqnkRtJmRCMzf4oXR7Q27Kn0Ieejui1GsIjFjsEyWAHqixJSKeaB3JNSIQXWZXegIAsloZcdUNJ0f6IGR6LlWhaaN5yJl3ZI63_ZA3hDf26nNnH8YcDSWIs-DYdQnrFSBoxbDlh5RjVN2A3qmvU1AAseceg8K1TtchRMfamSBjWh1MHGmj_4ZASujYuiaJVUmFHSWdgLYkkgc8uVGaIMJRSBWLUsH-3i018_grJtitlMwTEChqaciRRaYONqT3XjH_t-awkjwkc_XeQNmjAyVUn00y76H9bZ7zIzW0-A1vXnU65u9EeOXKjNjHBv7OOsRAGMw' },
+    { name:'Little Island', address:'Pier 55, Hudson River Park, New York, NY 10014', category:'🌿 פארק / טבע', place_id:'ChIJL-CJmTFZwokRsPcqje_bn7w', lat:40.7420024, lng:-74.010299, photoUrl:PHOTO_BASE+'Ab43m-ujaMXmZxap6NqTOF8BpQoyxFwHmFEYiKHhaOUkVdgnnUiuc2-w9qMyxN4zdJ3Y7Jhl7vP0f86P9ua_ygW--bR8KjvVaybo3186Vt2Fkd4uBUiA3L0wiuELoRKogDQJtquZ-UrakmOL3HTRYaYMg_a97X_zThyg6-ByheQ2mNZ3DhbYy4WOpqG_e-bQn8AVMcY6ZdF0FVIcjEdxvpmAo0s36MNg7_mHIKiUZgunkiE9PgvRyMil44x31hSjYjzMEndVZh2MuSfjHm4Qh0WBHHCDLWCKZoVYdzPuC0hmgnAVndERckKrpSEGvsDcc-R3dexT5hCFYz40-7C-ZUgM2O41mwZ9MuQqzGxvS_fb2VHkce4_tWRASPZuGSc-N3VVliyKsWJYbKvGNdGiSJeJVk0FeDAIEinb924xKLjPwpCj1w' }
+  ];
+
+  let map, markers = [], pendingPlace = null, uploadedImageData = null;
+  let sharedIW, closeIWTimeout, activeIWPlace = null;
+  const selectedIds = new Set();
+  const newPlaceIds = new Set(JSON.parse(sessionStorage.getItem('newPlaces') || '[]'));
+
+  document.querySelectorAll('.card[data-place-id]').forEach(card => {
+    if (newPlaceIds.has(card.dataset.placeId)) card.classList.add('is-new');
+  });
+
+  function initMap() {
+    map = new google.maps.Map(document.getElementById('map'), {
+      center:{lat:40.73,lng:-73.99}, zoom:12,
+      styles:[
+        {elementType:'geometry',stylers:[{color:'#1a1a24'}]},
+        {elementType:'labels.text.stroke',stylers:[{color:'#1a1a24'}]},
+        {elementType:'labels.text.fill',stylers:[{color:'#746855'}]},
+        {featureType:'road',elementType:'geometry',stylers:[{color:'#2c2c3a'}]},
+        {featureType:'road',elementType:'labels.text.fill',stylers:[{color:'#9ca5b3'}]},
+        {featureType:'water',elementType:'geometry',stylers:[{color:'#0d1b2a'}]},
+        {featureType:'water',elementType:'labels.text.fill',stylers:[{color:'#515c6d'}]},
+        {featureType:'poi',stylers:[{visibility:'off'}]},
+        {featureType:'transit',stylers:[{visibility:'off'}]}
+      ],
+      disableDefaultUI:false, zoomControl:true, mapTypeControl:false, streetViewControl:false, fullscreenControl:false
+    });
+    initialPlaces.forEach(p => addMarker(p, false));
+    initSharedInfoWindow();
+  }
+
+  function haversineDistance(lat1,lng1,lat2,lng2){
+    const R=6371,toRad=d=>d*Math.PI/180;
+    const dLat=toRad(lat2-lat1),dLng=toRad(lng2-lng1);
+    const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  }
+
+  function highlightAndSortCards(place){
+    const grid=document.getElementById('places-grid');
+    const allCards=[...grid.querySelectorAll('.card')];
+    const target=allCards.find(c=>c.dataset.placeId===place.place_id);
+    if(!target)return;
+    target.classList.remove('highlighted'); void target.offsetWidth;
+    target.classList.add('highlighted');
+    grid.prepend(target);
+    target.scrollIntoView({behavior:'smooth',block:'nearest'});
+    setTimeout(()=>target.classList.remove('highlighted'),1500);
+    const rest=[...grid.querySelectorAll('.card')].filter(c=>c!==target);
+    rest.sort((a,b)=>{
+      const da=haversineDistance(place.lat,place.lng,+a.dataset.lat,+a.dataset.lng);
+      const db=haversineDistance(place.lat,place.lng,+b.dataset.lat,+b.dataset.lng);
+      return da-db;
+    });
+    rest.forEach(c=>grid.appendChild(c));
+  }
+
+  function buildInfoContent(place,zoom){
+    const mapsUrl=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${place.place_id}`;
+    const imgSrc=place.photoUrl||null;
+    const closeBtn=`<button onclick="window._closeIW()" style="position:absolute;top:8px;left:8px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.6);border:none;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10">✕</button>`;
+    if(zoom<13)return`<div id="iw-popup" style="color:#f0f0f0;padding:8px 14px;font-family:sans-serif;white-space:nowrap"><div style="font-weight:700;font-size:.9rem">${place.name}</div></div>`;
+    if(zoom<15)return`<div id="iw-popup" style="color:#f0f0f0;width:210px;font-family:sans-serif;position:relative">${closeBtn}${imgSrc?`<img src="${imgSrc}" style="width:100%;height:120px;object-fit:cover;display:block">`:''}
+      <div style="padding:10px 12px;font-weight:700;font-size:.9rem">${place.name}</div></div>`;
+    return`<div id="iw-popup" style="color:#f0f0f0;width:230px;font-family:sans-serif;position:relative">${closeBtn}${imgSrc?`<img src="${imgSrc}" style="width:100%;height:135px;object-fit:cover;display:block">`:''}
+      <div style="padding:10px 14px">
+        <div style="font-weight:700;font-size:.95rem;margin-bottom:3px">${place.name}</div>
+        <div style="font-size:.72rem;color:#888;margin-bottom:8px">${place.address}</div>
+        <a href="${mapsUrl}" target="_blank" onclick="event.stopPropagation()" style="font-size:.8rem;color:#4a8cff;text-decoration:none;font-weight:600">פתח ב-Maps →</a>
+      </div></div>`;
+  }
+
+  window._closeIW=()=>{ if(sharedIW)sharedIW.close(); };
+
+  function initSharedInfoWindow(){
+    sharedIW=new google.maps.InfoWindow({disableAutoPan:true});
+    sharedIW.addListener('domready',()=>{
+      const popup=document.getElementById('iw-popup');
+      if(!popup)return;
+      popup.addEventListener('mouseenter',()=>clearTimeout(closeIWTimeout));
+      popup.addEventListener('mouseleave',()=>{closeIWTimeout=setTimeout(()=>sharedIW.close(),120);});
+      popup.addEventListener('click',e=>{
+        if(e.target.tagName==='A'||e.target.tagName==='BUTTON')return;
+        if(activeIWPlace)highlightAndSortCards(activeIWPlace);
+      });
+    });
+    map.addListener('zoom_changed',()=>{
+      if(sharedIW.getMap()&&activeIWPlace)sharedIW.setContent(buildInfoContent(activeIWPlace,map.getZoom()));
+    });
+  }
+
+  function addMarker(place,isNew){
+    const marker=new google.maps.Marker({
+      position:{lat:place.lat,lng:place.lng},map,title:place.name,
+      icon:{path:google.maps.SymbolPath.CIRCLE,scale:isNew?10:8,fillColor:isNew?'#e53935':'#1a73e8',fillOpacity:1,strokeColor:'#fff',strokeWeight:2},
+      animation:isNew?google.maps.Animation.DROP:null
+    });
+    marker.addListener('mouseover',()=>{
+      clearTimeout(closeIWTimeout); activeIWPlace=place;
+      sharedIW.setContent(buildInfoContent(place,map.getZoom()));
+      sharedIW.open(map,marker);
+    });
+    marker.addListener('mouseout',()=>{closeIWTimeout=setTimeout(()=>sharedIW.close(),200);});
+    markers.push(marker);
+  }
+
+  // ── CHAT BAR ──
+  function openPanel(){ document.getElementById('chat-panel-wrap').classList.add('open'); document.getElementById('chat-expand').classList.add('open'); }
+  function closePanel(){ document.getElementById('chat-panel-wrap').classList.remove('open'); document.getElementById('chat-expand').classList.remove('open'); }
+  function togglePanel(){ document.getElementById('chat-panel-wrap').classList.contains('open')?closePanel():openPanel(); }
+
+  function getActiveTab(){ return document.querySelector('.chat-tab.active')?.dataset.tab||'text'; }
+
+  function updateInputState(){
+    const tab=getActiveTab(), input=document.getElementById('input-text');
+    const pl={text:'הוסף מקום — שם מקום, או הדבק טקסט...',url:'הדבק לינק לסרטון (YouTube / Instagram / TikTok)',image:'העלה תמונה — הסוכן יזהה את המקום אוטומטית'};
+    input.placeholder=pl[tab]||pl.text;
+    input.disabled=(tab==='image');
+  }
+
+  function switchTab(name){
+    document.querySelectorAll('.chat-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.chat-tab-content').forEach(t=>t.classList.remove('active'));
+    document.querySelector(`.chat-tab[data-tab="${name}"]`).classList.add('active');
+    document.getElementById('ctab-'+name).classList.add('active');
+    updateInputState();
+  }
+
+  document.querySelectorAll('.chat-tab').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      switchTab(btn.dataset.tab);
+      if(btn.dataset.tab==='image') openPanel();
+      resetAgent();
+    });
+  });
+
+  document.getElementById('chat-expand').addEventListener('click', togglePanel);
+
+  document.getElementById('chat-attach').addEventListener('click',()=>{
+    switchTab('image'); openPanel();
+    document.getElementById('chat-attach').classList.add('img-active');
+    document.getElementById('file-input').click();
+  });
+
+  document.getElementById('input-text').addEventListener('input',e=>{
+    const v=e.target.value.trim();
+    if((v.startsWith('http://')||v.startsWith('https://'))&&getActiveTab()==='text') switchTab('url');
+  });
+
+  document.getElementById('input-text').addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();document.getElementById('btn-submit').click();}
+  });
+
+  document.getElementById('upload-zone').addEventListener('click',()=>document.getElementById('file-input').click());
+  document.getElementById('upload-zone').addEventListener('dragover',e=>{e.preventDefault();document.getElementById('upload-zone').style.borderColor='#1a73e8';});
+  document.getElementById('upload-zone').addEventListener('drop',e=>{e.preventDefault();handleFile(e.dataTransfer.files[0]);});
+  document.getElementById('file-input').addEventListener('change',e=>handleFile(e.target.files[0]));
+
+  function handleFile(file){
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=async ev=>{
+      const preview=document.getElementById('image-preview');
+      preview.src=ev.target.result; preview.style.display='block';
+      document.getElementById('upload-zone').style.display='none';
+      uploadedImageData=ev.target.result;
+      openPanel();
+      await runImageSearch(ev.target.result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function identifyPlaceFromImage(imageData){
+    const base64=imageData.replace(/^data:image\/[a-zA-Z+]+;base64,/,'');
+    try{
+      const res=await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+        { method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            contents:[{parts:[
+              {text:'What specific place, restaurant, café, landmark, or tourist attraction is shown in this image? Reply with ONLY the name and city (for example: "Katz\'s Delicatessen, New York" or "Eiffel Tower, Paris"). If you cannot identify a specific named place, reply with exactly: unknown'},
+              {inline_data:{mime_type:file?.type||'image/jpeg',data:base64}}
+            ]}],
+            generationConfig:{maxOutputTokens:60,temperature:0}
+          })
+        }
+      );
+      const data=await res.json();
+      const text=data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      return(text&&text.toLowerCase()!=='unknown')?text:null;
+    }catch{return null;}
+  }
+
+  async function runImageSearch(imageData){
+    setStatus('מזהה מקום בתמונה...',true);
+    document.getElementById('btn-submit').disabled=true;
+    document.getElementById('result-preview').classList.remove('show');
+    document.getElementById('btn-add-confirm').style.display='none';
+
+    const placeName=await identifyPlaceFromImage(imageData);
+    if(!placeName){
+      setStatus('לא זוהה מקום — נסה תמונה ברורה יותר',false);
+      document.getElementById('btn-submit').disabled=false;
+      return;
+    }
+
+    setStatus(`זוהה: "${placeName}" — מחפש...`,true);
+    const result=await searchPlace(placeName+(placeName.toLowerCase().includes('new york')?'':' New York'));
+    if(!result){
+      setStatus('המקום זוהה אך לא נמצא ב-Maps — נסה טקסט',false);
+      document.getElementById('btn-submit').disabled=false;
+      return;
+    }
+
+    pendingPlace={name:result.name,address:result.formatted_address,place_id:result.place_id,
+      lat:result.geometry.location.lat,lng:result.geometry.location.lng,
+      photoUrl:result.photoUrl||null,category:guessCategory(result.name),
+      uploadedImage:imageData};
+    document.getElementById('result-name').textContent=result.name;
+    document.getElementById('result-addr').textContent=result.formatted_address;
+    document.getElementById('result-preview').classList.add('show');
+    document.getElementById('btn-add-confirm').style.display='block';
+    setStatus('',false);
+    document.getElementById('btn-submit').disabled=false;
+  }
+
+  async function getYouTubeTitle(url){
+    try{const res=await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);const data=await res.json();return data.title||null;}catch{return null;}
+  }
+
+  function searchPlace(query){
+    return new Promise(resolve=>{
+      const service=new google.maps.places.PlacesService(map);
+      service.findPlaceFromQuery({query,fields:['place_id','name','formatted_address','geometry','photos']},(results,status)=>{
+        if(status===google.maps.places.PlacesServiceStatus.OK&&results.length>0){
+          const r=results[0];
+          resolve({place_id:r.place_id,name:r.name,formatted_address:r.formatted_address,
+            geometry:{location:{lat:r.geometry.location.lat(),lng:r.geometry.location.lng()}},
+            photoUrl:r.photos?r.photos[0].getUrl({maxWidth:600}):null});
+        }else{resolve(null);}
+      });
+    });
+  }
+
+  function guessCategory(name){
+    const n=name.toLowerCase();
+    if(/park|island|garden|nature|beach/.test(n))return'🌿 פארק / טבע';
+    if(/museum|gallery/.test(n))return'🏛️ מוזיאון';
+    if(/bar|cocktail|wine/.test(n))return'🍸 בר';
+    if(/cafe|coffee|espresso/.test(n))return'☕ קפה / בית קפה';
+    if(/bakery|pastry|dessert|ice cream/.test(n))return'🍰 קינוח / מאפייה';
+    if(/hotel|inn|hostel/.test(n))return'🏨 מלון';
+    if(/tram|ferry|bridge|view|observation/.test(n))return'🌆 תצפית';
+    if(/market|shop|store|mall/.test(n))return'🛍️ קניות';
+    if(/theater|theatre|music|show/.test(n))return'🎭 בידור';
+    if(/breakfast|brunch|bagel/.test(n))return'🌅 ארוחת בוקר';
+    if(/restaurant|deli|kitchen|grill|eat/.test(n))return'🍽️ מסעדה';
+    return'📍 כללי';
+  }
+
+  document.getElementById('btn-submit').addEventListener('click',async()=>{
+    const activeTab=getActiveTab(); let query='';
+    setStatus('מחפש...',true);
+    document.getElementById('btn-submit').disabled=true;
+    document.getElementById('result-preview').classList.remove('show');
+    document.getElementById('btn-add-confirm').style.display='none';
+
+    if(activeTab==='text'){
+      query=document.getElementById('input-text').value.trim();
+    }else if(activeTab==='url'){
+      const urlVal=document.getElementById('input-text').value.trim();
+      const nameOverride=document.getElementById('input-url-name').value.trim();
+      if(nameOverride){
+        query=nameOverride;
+      }else if(urlVal.includes('youtube.com')||urlVal.includes('youtu.be')){
+        setStatus('מוציא כותרת מהסרטון...',true);
+        const title=await getYouTubeTitle(urlVal);
+        if(title){query=title+' New York';setStatus(`כותרת: "${title}" — מחפש...`,true);}
+        else{document.getElementById('url-name-group').style.display='block';setStatus('לא הצלחתי לחלץ — הקלד את שם המקום',false);document.getElementById('btn-submit').disabled=false;return;}
+      }else{
+        document.getElementById('url-name-group').style.display='block';
+        setStatus('הקלד את שם המקום שבסרטון',false);
+        document.getElementById('btn-submit').disabled=false;return;
+      }
+    }else if(activeTab==='image'){
+      if(!uploadedImageData){
+        setStatus('',false); document.getElementById('btn-submit').disabled=false;
+        document.getElementById('file-input').click(); return;
+      }
+      setStatus('',false); document.getElementById('btn-submit').disabled=false;
+      await runImageSearch(uploadedImageData); return;
+    }
+
+    if(!query){
+      setStatus('',false);
+      document.getElementById('btn-submit').disabled=false;
+      openPanel();
+      document.getElementById('input-text').focus();
+      return;
+    }
+
+    const result=await searchPlace(query+(query.toLowerCase().includes('new york')?'':' New York'));
+    if(!result){setStatus('לא נמצא מקום. נסה שם שונה.',false);document.getElementById('btn-submit').disabled=false;return;}
+
+    pendingPlace={name:result.name,address:result.formatted_address,place_id:result.place_id,
+      lat:result.geometry.location.lat,lng:result.geometry.location.lng,
+      photoUrl:result.photoUrl||null,category:guessCategory(result.name),
+      uploadedImage:activeTab==='image'?uploadedImageData:null};
+
+    document.getElementById('result-name').textContent=result.name;
+    document.getElementById('result-addr').textContent=result.formatted_address;
+    document.getElementById('result-preview').classList.add('show');
+    document.getElementById('btn-add-confirm').style.display='block';
+    setStatus('',false); document.getElementById('btn-submit').disabled=false;
+    openPanel();
+  });
+
+  document.getElementById('btn-add-confirm').addEventListener('click',()=>{
+    if(!pendingPlace)return;
+    addPlaceToPage(pendingPlace); closePanel(); resetAgent();
+  });
+
+  function addPlaceToPage(place){
+    const mapsUrl=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${place.place_id}`;
+    const imgSrc=place.uploadedImage||place.photoUrl||`https://maps.googleapis.com/maps/api/staticmap?center=${place.lat},${place.lng}&zoom=15&size=600x400&key=${API_KEY}`;
+    const card=document.createElement('div');
+    card.className='card is-new';
+    card.dataset.placeId=place.place_id; card.dataset.lat=place.lat;
+    card.dataset.lng=place.lng; card.dataset.name=place.name; card.dataset.mapsUrl=mapsUrl;
+    card.innerHTML=`
+      <div class="select-check"></div>
+      <a class="card-img-wrap" href="${mapsUrl}" target="_blank" rel="noopener">
+        <img src="${imgSrc}" alt="${place.name}" loading="lazy">
+        <div class="grad"></div>
+        <span class="category-badge">${place.category}</span>
+        <div class="title-overlay"><h2>${place.name}</h2></div>
+      </a>
+      <div class="card-body">
+        <div class="address">${place.address}</div>
+        <div class="link-box">${mapsUrl}</div>
+        <div class="actions">
+          <a class="btn-maps" href="${mapsUrl}" target="_blank">פתח ב-Maps</a>
+          <button class="btn-copy" onclick="copyLink(this,'${mapsUrl}')">העתק</button>
+        </div>
+      </div>`;
+    document.getElementById('places-grid').prepend(card);
+    card.scrollIntoView({behavior:'smooth',block:'start'});
+    bindCardSelection(card);
+    newPlaceIds.add(place.place_id);
+    sessionStorage.setItem('newPlaces',JSON.stringify([...newPlaceIds]));
+    const count=document.querySelectorAll('.card').length;
+    document.getElementById('place-count').textContent=`${count} מקומות שמורים`;
+    document.getElementById('footer-count').textContent=`Link2Maps · ${count} מקומות · New York 🗽`;
+    addMarker(place,true);
+    if(map)map.panTo({lat:place.lat,lng:place.lng});
+  }
+
+  function bindCardSelection(card){
+    card.addEventListener('click',e=>{
+      if(e.target.closest('a')||e.target.closest('.btn-copy')||e.target.closest('.btn-maps'))return;
+      const id=card.dataset.placeId;
+      if(selectedIds.has(id)){selectedIds.delete(id);card.classList.remove('selected');}
+      else{selectedIds.add(id);card.classList.add('selected');}
+      updateSelectionBar();
+    });
+  }
+
+  function updateSelectionBar(){
+    document.getElementById('sel-count').textContent=`${selectedIds.size} נבחרו`;
+    document.getElementById('selection-bar').classList.toggle('visible',selectedIds.size>0);
+  }
+
+  document.getElementById('sel-copy').addEventListener('click',()=>{
+    const links=[...document.querySelectorAll('.card.selected')].map(c=>c.dataset.mapsUrl||'').filter(Boolean).join('\n');
+    navigator.clipboard.writeText(links).then(()=>{
+      const btn=document.getElementById('sel-copy'); btn.textContent='✓ הועתק!';
+      setTimeout(()=>{btn.textContent='העתק לינקים';},2000);
+    });
+  });
+
+  document.getElementById('sel-cancel').addEventListener('click',()=>{
+    selectedIds.clear();
+    document.querySelectorAll('.card.selected').forEach(c=>c.classList.remove('selected'));
+    updateSelectionBar();
+  });
+
+  document.querySelectorAll('.card').forEach(card=>{
+    const link=card.querySelector('.btn-maps');
+    if(link)card.dataset.mapsUrl=link.href;
+    bindCardSelection(card);
+  });
+
+  function setStatus(msg,loading){
+    document.getElementById('status-text').textContent=msg;
+    document.getElementById('spinner').style.display=loading?'block':'none';
+  }
+
+  function resetAgent(){
+    document.getElementById('input-text').value='';
+    document.getElementById('input-url-name').value='';
+    document.getElementById('url-name-group').style.display='none';
+    document.getElementById('image-preview').style.display='none';
+    document.getElementById('image-preview').src='';
+    document.getElementById('upload-zone').style.display='block';
+    document.getElementById('result-preview').classList.remove('show');
+    document.getElementById('btn-add-confirm').style.display='none';
+    document.getElementById('btn-submit').disabled=false;
+    document.getElementById('chat-attach').classList.remove('img-active');
+    uploadedImageData=null; pendingPlace=null;
+    setStatus('',false); updateInputState();
+  }
+
+  function copyLink(btn,url){
+    navigator.clipboard.writeText(url).then(()=>{
+      const orig=btn.textContent; btn.textContent='✓ הועתק'; btn.classList.add('copied');
+      setTimeout(()=>{btn.textContent=orig;btn.classList.remove('copied');},2000);
+    });
+  }
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCgKKiiD1AB54dgehDyccHDNrimDTpmysc&libraries=places&callback=initMap" async defer></script>
+
+</body>
+</html>

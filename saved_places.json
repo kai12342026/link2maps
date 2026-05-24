@@ -1,0 +1,34 @@
+{
+  "places": [
+    {
+      "name": "Roosevelt Island Tram",
+      "city": "New York",
+      "category": "🎭 בידור",
+      "address": "254 E 60th St, New York, NY 10022",
+      "place_id": "ChIJfQDvGoxZwokRvzLRRApytgQ",
+      "maps_url": "https://www.google.com/maps/place/?q=place_id:ChIJfQDvGoxZwokRvzLRRApytgQ",
+      "source": "https://www.instagram.com/reel/DYAXDmMASB4/",
+      "saved_at": "2026-05-23"
+    },
+    {
+      "name": "E River Ferry (NYC Ferry)",
+      "city": "New York",
+      "category": "🎭 בידור",
+      "address": "East River, New York, NY",
+      "place_id": "ChIJ_4F5zNJbwokRBLOhm0NpRxc",
+      "maps_url": "https://www.google.com/maps/place/?q=place_id:ChIJ_4F5zNJbwokRBLOhm0NpRxc",
+      "source": "https://www.instagram.com/reel/DYAXDmMASB4/",
+      "saved_at": "2026-05-23"
+    },
+    {
+      "name": "Little Island",
+      "city": "New York",
+      "category": "🌿 פארק / טבע",
+      "address": "Pier 55 at Hudson River Park, Hudson River Greenway, New York, NY 10014",
+      "place_id": "ChIJL-CJmTFZwokRsPcqje_bn7w",
+      "maps_url": "https://www.google.com/maps/place/?q=place_id:ChIJL-CJmTFZwokRsPcqje_bn7w",
+      "source": "https://www.instagram.com/littleislandnyc",
+      "saved_at": "2026-05-23"
+    }
+  ]
+}
