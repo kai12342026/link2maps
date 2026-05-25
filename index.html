@@ -742,11 +742,41 @@
     if(getActiveTab()==='url') switchTab('text');
   });
 
-  function addPlaceToPage(place){
+  const LS_KEY = 'link2maps_places_ny';
+
+  function storePlace(place){
+    try{
+      const stored=JSON.parse(localStorage.getItem(LS_KEY)||'[]');
+      if(!stored.find(p=>String(p.place_id)===String(place.place_id))){
+        // לא שומרים uploadedImage (base64 כבד מדי)
+        const {uploadedImage,...toSave}=place;
+        stored.push(toSave);
+        localStorage.setItem(LS_KEY,JSON.stringify(stored));
+      }
+    }catch(e){console.error('storePlace:',e);}
+  }
+
+  function loadStoredPlaces(){
+    try{
+      const stored=JSON.parse(localStorage.getItem(LS_KEY)||'[]');
+      const existingIds=new Set([...document.querySelectorAll('.card[data-place-id]')].map(c=>c.dataset.placeId));
+      stored.forEach(place=>{
+        if(!existingIds.has(String(place.place_id))) addPlaceToPage(place,true);
+      });
+    }catch(e){console.error('loadStoredPlaces:',e);}
+  }
+
+  function refreshCount(){
+    const count=document.querySelectorAll('.card').length;
+    document.getElementById('place-count').textContent=`${count} מקומות שמורים`;
+    document.getElementById('footer-count').textContent=`Link2Maps · ${count} מקומות · New York 🗽`;
+  }
+
+  function addPlaceToPage(place, silent=false){
     const mapsUrl=place.mapsUrl||`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${place.place_id}`;
-    const imgSrc=place.uploadedImage||place.photoUrl||null;
+    const imgSrc=(!silent&&place.uploadedImage)||place.photoUrl||null;
     const card=document.createElement('div');
-    card.className='card is-new';
+    card.className='card'+(silent?'':' is-new');
     card.dataset.placeId=place.place_id; card.dataset.lat=place.lat;
     card.dataset.lng=place.lng; card.dataset.name=place.name; card.dataset.mapsUrl=mapsUrl;
     card.innerHTML=`
@@ -766,15 +796,18 @@
         </div>
       </div>`;
     document.getElementById('places-grid').prepend(card);
-    card.scrollIntoView({behavior:'smooth',block:'start'});
     bindCardSelection(card);
-    newPlaceIds.add(place.place_id);
-    sessionStorage.setItem('newPlaces',JSON.stringify([...newPlaceIds]));
-    const count=document.querySelectorAll('.card').length;
-    document.getElementById('place-count').textContent=`${count} מקומות שמורים`;
-    document.getElementById('footer-count').textContent=`Link2Maps · ${count} מקומות · New York 🗽`;
-    addMarker(place,true);
-    if(map)map.panTo({lat:place.lat,lng:place.lng});
+    if(!silent){
+      card.scrollIntoView({behavior:'smooth',block:'start'});
+      newPlaceIds.add(place.place_id);
+      sessionStorage.setItem('newPlaces',JSON.stringify([...newPlaceIds]));
+      storePlace(place);
+      addMarker(place,true);
+      if(map&&place.lat!=null)map.panTo({lat:place.lat,lng:place.lng});
+    }else{
+      addMarker(place,false);
+    }
+    refreshCount();
   }
 
   function bindCardSelection(card){
@@ -833,6 +866,8 @@
       setTimeout(()=>{btn.textContent=orig;btn.classList.remove('copied');},2000);
     });
   }
+
+  loadStoredPlaces();
 </script>
 
 <!-- Maps JS API — הוסף כאן script עם API key תקף כדי להפעיל את המפה -->
