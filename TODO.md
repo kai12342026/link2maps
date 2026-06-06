@@ -4,28 +4,38 @@
 
 ## להתחיל מחר
 
-- [ ] **לסיים יצירת API key חדש** ב-Google Cloud Console
-  - Create credentials → API Key
+- [ ] **ליצור API key חדש** ב-Google Cloud Console
+  - Credentials → + Create credentials → API Key
   - להגביל ל: Maps JavaScript API + Places API
-  - לעדכן ב-`index.html` בשלושה מקומות: `API_KEY`, `PHOTO_BASE`, `<script src>`
-- [ ] לבדוק בדפדפן את ה-chat-bar: desktop + mobile
+  - לבטל את ה-comment בתחתית `index.html` ולהכניס את המפתח
+  - לעדכן גם את `PHOTO_BASE` בראש ה-script
+- [ ] לבדוק שהמפה עולה ותמונות הכרטיסים נטענות אחרי חיבור המפתח
 
 ---
 
 ## פתוח
 
-- [ ] בדיקת chat-bar בדפדפן אחרי עדכון המפתח (לא נבדק עדיין)
-- [ ] שקול הוספת כפתור "הצג מפה" במובייל (המפה מוסתרת כרגע לחלוטין)
+- [ ] מחיקת מקום שמור — אין כרגע אפשרות למחוק מ-localStorage
+- [ ] מקומות שנוספו ללא API key (keyless) לא יהפכו ל-markers כשהמפה תחזור — דורש פתרון (re-lookup?)
+- [ ] הוספת כפתור "הצג מפה" במובייל (המפה מוסתרת לחלוטין)
+- [ ] תמיכה בלימה 🇵🇪 — כרגע כל החיפושים מוסיפים "New York" כברירת מחדל
 
 ---
 
 ## הסתיים
 
 - [x] chat-bar קבוע בתחתית המסך (`position: fixed; bottom: 0`)
-- [x] פאנל מורחב שנפתח מעלה (4 טאבים: שם / לינק / תמונה / הדבק)
-- [x] auto-detect URL בשדה הראשי
-- [x] כפתור 📎 → טאב תמונה + file picker
-- [x] Enter → שליחה
+- [x] שורת קלט פשוטה: `[שדה] [🔍]` בלבד — הוסרו 📎 ו-▾
+- [x] auto-detect URL בשדה הראשי (מעבר אוטומטי לטאב לינק)
+- [x] טאב "לינק לסרטון" — חילוץ כותרת אוטומטי ללא שדה נוסף
+- [x] כפתור "לא, שנה" בשלב האישור
+- [x] placeholder: "הוסף מיקום או הדבק לינק"
+- [x] שמירת מקומות ב-localStorage (שורדים רענון)
+- [x] הוספת מקומות ללא API key — URL ישיר ל-Maps
+- [x] תיקון iOS auto-zoom (font-size 16px על inputs)
+- [x] תיקון mobile layout: html height, overflow-x, min-width על cards
+- [x] הסרת תמונות שבורות — fallback לאמוג'י קטגוריה
+- [x] תיקון קטגוריות — הוסר "show"/"music" מבידור, תוקן `\bbar\b`
+- [x] פאנל מפה נשמר עם placeholder, מוכן לחיבור עתידי
 - [x] selection-bar ממוקם מעל ה-chat-bar
 - [x] תמיכה מלאה במובייל (one-column, ללא מפה, safe-area)
-- [x] תכנון ועיצוב ממשק chat-bar (CSS, HTML, JS)
